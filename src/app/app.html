@@ -242,7 +242,7 @@
             <div
                 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px;">
                 <h2 style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">Historial de Facturación</h2>
-                <button class="btn-primary" style="padding: 8px 16px;"><i class="fa-solid fa-file-invoice"></i> Nueva
+                <button class="btn-primary" style="padding: 8px 16px;" (click)="nuevaFactura()"><i class="fa-solid fa-file-invoice"></i> Nueva
                     Factura</button>
             </div>
 
@@ -255,6 +255,7 @@
                             <th>Fecha</th>
                             <th>Monto</th>
                             <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -265,6 +266,9 @@
                             <td>{{ factura.monto | currency:'EUR' }}</td>
                             <td><span class="status" [ngClass]="factura.estado.toLowerCase()">{{ factura.estado
                                     }}</span></td>
+                            <td>
+                                <button *ngIf="factura.estado === 'Pendiente'" class="btn-secondary" style="font-size: 11px; padding: 4px 8px;" (click)="marcarPagado(factura)">Marcar Pagado</button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -339,7 +343,7 @@
                 <option value="Presencial">Presencial</option>
             </select>
             <button type="submit" class="btn-primary" style="width: 100%; margin-top: 15px;"
-                [disabled]="citaForm.invalid">Guardar Cita</button>
+                [disabled]="citaForm.invalid">Guardar Paciente</button>
         </form>
     </div>
 </div>

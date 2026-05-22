@@ -88,20 +88,25 @@ export class App implements OnInit {
     }
 
     // Lista de facturas de prueba
-    facturas: Factura[] = [
-        { id: 'FAC-2026-001', paciente: 'María López', fecha: '10 May 2026', monto: 60.00, estado: 'Pagado' },
-        { id: 'FAC-2026-002', paciente: 'Carlos Ruiz', fecha: '08 May 2026', monto: 60.00, estado: 'Pendiente' },
-        { id: 'FAC-2026-003', paciente: 'Laura Gómez', fecha: '05 May 2026', monto: 75.00, estado: 'Pagado' },
-        { id: 'FAC-2026-004', paciente: 'Javier Fernández', fecha: '02 May 2026', monto: 50.00, estado: 'Pagado' }
-    ];
+    facturas: Factura[] = [];
 
     // Getter para obtener la lista de pacientes filtrada dinámicamente
     get pacientesFiltrados() {
-        const term = (this.searchControl.value || '').toLowerCase();
-        return this.pacientes.filter(p => 
-            p.nombre.toLowerCase().includes(term) || 
-            p.diagnostico.toLowerCase().includes(term)
-        );
+        const rawTerm = this.searchControl.value || '';
+        // Normalizamos el término: minúsculas, sin acentos y sin espacios a los lados
+        const term = rawTerm.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        
+        if (!term) {
+            return this.pacientes;
+        }
+
+        return this.pacientes.filter(p => {
+            // Normalizamos también los datos del paciente para compararlos en igualdad de condiciones
+            const nombreNormalizado = p.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const diagNormalizado = p.diagnostico.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            return nombreNormalizado.includes(term) || diagNormalizado.includes(term);
+        });
     }
 
     // Getter para obtener el total de pacientes registrados
@@ -176,6 +181,19 @@ export class App implements OnInit {
                 this.pacientes = [
                     { nombre: 'María López', edad: 34, diagnostico: 'Ansiedad Generalizada', ultimaSesion: '10 May 2026' },
                     { nombre: 'Carlos Ruiz', edad: 28, diagnostico: 'Depresión Leve', ultimaSesion: '08 May 2026' }
+                ];
+            }
+            
+            // Cargar facturas desde localStorage si existen
+            const facturasGuardadas = localStorage.getItem('lumina_facturas');
+            if (facturasGuardadas) {
+                this.facturas = JSON.parse(facturasGuardadas);
+            } else {
+                this.facturas = [
+                    { id: 'FAC-2026-001', paciente: 'María López', fecha: '10 May 2026', monto: 60.00, estado: 'Pagado' },
+                    { id: 'FAC-2026-002', paciente: 'Carlos Ruiz', fecha: '08 May 2026', monto: 60.00, estado: 'Pendiente' },
+                    { id: 'FAC-2026-003', paciente: 'Laura Gómez', fecha: '05 May 2026', monto: 75.00, estado: 'Pagado' },
+                    { id: 'FAC-2026-004', paciente: 'Javier Fernández', fecha: '02 May 2026', monto: 50.00, estado: 'Pagado' }
                 ];
             }
             
@@ -273,6 +291,12 @@ export class App implements OnInit {
     private guardarPacientesEnStorage() {
         if (isPlatformBrowser(this.platformId)) {
             localStorage.setItem('lumina_pacientes', JSON.stringify(this.pacientes));
+        }
+    }
+
+    private guardarFacturasEnStorage() {
+        if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('lumina_facturas', JSON.stringify(this.facturas));
         }
     }
 
@@ -443,6 +467,41 @@ export class App implements OnInit {
             this.mostrarToast('Perfil de paciente actualizado');
         }
         this.cerrarModalPaciente();
+    }
+
+    nuevaFactura() {
+        const paciente = prompt('Introduce el nombre del paciente:');
+        if (!paciente) return;
+        
+        const montoStr = prompt('Introduce el importe de la factura (€):');
+        if (!montoStr) return;
+        
+        // Reemplazamos coma por punto para permitir decimales europeos y convertimos a número
+        const monto = parseFloat(montoStr.replace(',', '.'));
+        if (isNaN(monto)) {
+            this.mostrarToast('El importe introducido no es válido');
+            return;
+        }
+
+        const idNueva = `FAC-${this.anioActual}-${String(this.facturas.length + 1).padStart(3, '0')}`;
+        const fechaActual = `${new Date().getDate().toString().padStart(2, '0')} ${this.mesesNombres[new Date().getMonth()].substring(0, 3)} ${this.anioActual}`;
+
+        this.facturas.unshift({
+            id: idNueva,
+            paciente: paciente,
+            fecha: fechaActual,
+            monto: monto,
+            estado: 'Pendiente'
+        });
+
+        this.guardarFacturasEnStorage();
+        this.mostrarToast('Factura generada correctamente');
+    }
+
+    marcarPagado(factura: Factura) {
+        factura.estado = 'Pagado';
+        this.guardarFacturasEnStorage();
+        this.mostrarToast(`Factura ${factura.id} marcada como pagada`);
     }
 
     verCitasDia(dia: DiaCalendario) {
